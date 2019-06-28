@@ -18,11 +18,18 @@ to Azure Active Directory and dumps all the un expired and expired/about to expi
 The appId and the secret together is sensitive information so please keep them secure and do not share clientsecret to any unauthorized users. 
 
 Usage:
-Open Windows Powershell in administrative mode and cd to the location where you save this script.
-Run the script. It will prompt for your onmicrosoft account and password. Once authentication succeeds 
-It will create 2 files in the same folder as below:-
-Secret_Valid.txt: All unexpired and valid secrets are in Secret_Valid.
-Secret_Expiring.txt: All expired and about to be expiring (10 days from the day you run this script).
+
+#Get all keys for entire tenant. Files will be saved to C:\Temp
+GetAllKeys
+
+#Get all keys for entire tenant. Files will be saved specified path
+GetAllKeys -PathToSaveOutput 'C:\mywork\AADSecrets'
+
+#Get all keys for a particular ClientId. Files will be saved to C:\Temp
+GetAllKeys -AppId 'a5554ccc-14ed-48e8-a58f-f57a96d44f93'
+
+#Get all keys for a particular ClientId. Files will be saved specified path
+GetAllKeys -AppId 'a5554ccc-14ed-48e8-a58f-f57a96d44f93' -PathToSaveOutput 'C:\mywork\AADSecrets'
 
 #> 
 
@@ -110,10 +117,3 @@ Function GetAllKeys
         Write-Host "No App with $AppId Found"
     }
 }
-
-#Replace with your appid or clientId. If no appid is given, the script will get keys for all the apps in your tenants.
-#GetAllKeys
-#GetAllKeys -AppId 'a9554ccc-14ed-48e8-a58f-f57a96d44f91' -PathToSaveOutput 'C:\Temp\AADSecrets'
-
-#path of directory to save the output. Directory should exist. if not supplied default is C:\Temp\ 
-GetAllKeys -AppId 'a9554ccc-14ed-48e8-a58f-f57a96d44f91' -PathToSaveOutput 'C:\Temp\AADSecrets'

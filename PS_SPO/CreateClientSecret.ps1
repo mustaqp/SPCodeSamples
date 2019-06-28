@@ -15,15 +15,16 @@ https://www.microsoft.com/en-us/download/details.aspx?id=39267
 Use Case: Low Trust Provider Hosted Apps or Add-ins require Client Secret, which are valid for either 1 or 3 years. Once they Expire, 
 the apps will stop working and you need to generate new once for that particular appId or clientId. This PowerShell Script connects to
 Azure Active Directory and creates a client secret which is valid for 3 years. Note that each client secret contains 3 keys. 
-The new Secret will get saved in Secret_New.txt at C:\Temp. Save this clientsecret, 
-along with clientid or appid. This will be needed in web.config of your PHA. 
+The new Secret will get saved in Secret_New.txt at C:\Temp. This will be needed in web.config of your PHA. 
 
-Usage: Open the file and update the value of $appOrClientId with your clientId or AppId for which you want to generate Secret. 
-Save the ps1.
-Open Windows Powershell in administrative mode and cd to the location where you save this script.
-Run the script. It will prompt for your onmicrosoft account and password. Once authentication succeeds you will see C:\Temp\Secret_New.txt
-#> 
+Usage: 
+CreateNewClientSecret -AppId 'a5554ccc-14ed-48e8-a58f-f57a96d44f93'
 
+Or
+
+CreateNewClientSecret -AppId 'a5554ccc-14ed-48e8-a58f-f57a96d44f93' -PathToSaveOutput 'C:\mywork\AADSecrets'
+
+#>
 
 #Requires -Modules MSOnline
 
@@ -60,13 +61,3 @@ Function CreateNewClientSecret
     [string]::format($newappsettingstr, $AppId, $newClientSecret) | Out-File "$PathToSaveOutput\Secret_New.txt"
     Write-Host "New Web.Config Appsettings Generated at $PathToSaveOutput"    
 }
-  
-
-#replace with your appid or clientId
-$appOrClientId = 'a9554ccc-14ed-48e8-a58f-f57a96d44f90'
-
-#path of directory to save the output. if not passed default is C:\Temp\ 
-#CreateNewClientSecret -AppId $appOrClientId -PathToSaveOutput "C:\mysamples\AADSecrets"
-
-CreateNewClientSecret -AppId $appOrClientId
-Write-Host "Successfully Created ClientSecret for ClientId: $appOrClientId"

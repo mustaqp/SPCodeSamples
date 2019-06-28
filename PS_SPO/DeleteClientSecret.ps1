@@ -19,11 +19,14 @@ This PowerShell Script connects to Azure Active Directory and will delete all ex
 Note that a client secret contains 3 keys and all 3 keys needs to be deleted. This script will take care of that. 
 Once done you can run CreateClientSecret.ps1  
 
-Usage:
-Open the file and update the value of $appOrClientId with your clientId or AppId for which you want to delete the Secret. 
-Save the ps1. Open Windows Powershell in administrative mode and cd to the location where you save this script.
-Run the script. It will prompt for your onmicrosoft account and password. Once authentication succeeds 
-before deleting the keys, script logs it in Secret_Deleted.txt at C:\Temp Folder.
+Usage: 
+ 
+DeleteAllKeys -AppId 'a5554ccc-14ed-48e8-a58f-f57a96d44f93'
+
+Or
+
+DeleteAllKeys -AppId 'a5554ccc-14ed-48e8-a58f-f57a96d44f93' -PathToSaveOutput 'C:\mywork\AADSecrets'
+
 #> 
 
 #Requires -Modules MSOnline
@@ -31,7 +34,7 @@ before deleting the keys, script logs it in Secret_Deleted.txt at C:\Temp Folder
 $msolcred = get-credential
 connect-msolservice -credential $msolcred
 
-Function DeleteKeys
+Function DeleteAllKeys
 {
     Param(
         [string]
@@ -73,14 +76,6 @@ Function DeleteKeys
     }
 
     $allExpiredKeys | Out-File "$PathToSaveOutput\Secret_Deleted.txt"
-    Write-Host "Done. OutPut Saved at $PathToSaveOutput"
+    Write-Host "OutPut Saved at $PathToSaveOutput"
+    Write-Host "Successfully Deleted Keys for ClientId $appOrClientId" 
 } 
-
-#replace with your appid or clientId
-$appOrClientId = 'a9554ccc-14ed-48e8-a58f-f57a96d44f90'
-DeleteKeys -AppId $appOrClientId
-
-#path of directory to save the output. if not supplied default is C:\Temp\ 
-#DeleteKeys -AppId $appOrClientId -PathToSaveOutput "C:\mysamples\AADSecrets"
-
-Write-Host "Successfully Deleted Keys for ClientId $appOrClientId" 
