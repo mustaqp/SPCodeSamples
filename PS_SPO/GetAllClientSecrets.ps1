@@ -26,63 +26,94 @@ Secret_Expiring.txt: All expired and about to be expiring (10 days from the day 
 
 #> 
 
+#Requires -Modules MSOnline
 
 
-Import-module MSOnline -ErrorAction Continue
 $msolcred = get-credential
 connect-msolservice -credential $msolcred
 
-# List secrets that are expired or about to expire within 10 days from Today.
-$dayLimit = 10;
-$currentDate = (Get-Date).ToShortDateString();
+Function GetAllKeys
+{    
+    Param(
+        [string]
+        [Parameter(Mandatory=$false)]
+        [Alias("ClientId")]
+        $AppId,
 
-$ScriptPath = $MyInvocation.MyCommand.Path
-$ScriptDir  = Split-Path -Parent $ScriptPath
+        [string]
+        [Parameter(Mandatory=$false)]        
+        $PathToSaveOutput = "C:\Temp"
+    )
 
-$allExpiredKeys = @()
-$allValidKeys = @()
+    # List secrets that are expired or about to expire within 10 days from Today.
+    $dayLimit = 10;
+    $currentDate = (Get-Date).ToShortDateString();
 
+    $allExpiredKeys = @()
+    $allValidKeys = @()
 
-$applist = Get-MsolServicePrincipal -all  | Where-Object -FilterScript { ($_.DisplayName -notlike "*Microsoft*") -and ($_.DisplayName -notlike "autohost*") -and  ($_.ServicePrincipalNames -notlike "*localhost*")}
-
-foreach ($appentry in $applist)
-{
-    $principalId = $appentry.AppPrincipalId.Guid
-    $principalName = $appentry.DisplayName
-    
-    $clientSecrets = Get-MsolServicePrincipalCredential -AppPrincipalId $principalId -ReturnKeyValues $false | Where-Object { ($_.Type -ne "Other") -and ($_.Type -ne "Asymmetric") }
-    
-    if ($clientSecrets -ne $null)
+    If([string]::IsNullOrWhiteSpace($AppId))
     {
-        foreach ($secret in $clientSecrets)
-        {
-            $clientSecret = "" | Select "PrincipalName","PrincipalID","KeyId","SecretType","StartDate","EndDate","Usage"
-            $clientSecret.PrincipalName = $principalName
-            $clientSecret.PrincipalID = $principalId
-            $clientSecret.KeyId = $secret.KeyId
-            $clientSecret.SecretType = $secret.Type
-            $clientSecret.StartDate = $secret.StartDate
-            $clientSecret.EndDate = $secret.EndDate
-            $clientSecret.Usage = $secret.Usage
-            $keyEndDate = $secret.EndDate.ToShortDateString();
-            $dayDiff = New-TimeSpan -Start $currentDate -End $keyEndDate
+        $applist = Get-MsolServicePrincipal -all  | Where-Object -FilterScript { ($_.DisplayName -notlike "*Microsoft*") -and ($_.DisplayName -notlike "autohost*") -and  ($_.ServicePrincipalNames -notlike "*localhost*")}
+    }
+    else
+    {        
+        $applist = Get-MsolServicePrincipal -all  | Where-Object -FilterScript { ($_.AppPrincipalId.Guid -eq $AppId)}
+    }
 
-            if($dayDiff.Days -le $dayLimit)
+    if ($null -ne $applist -and $applist.Count -ge 0)
+    {
+        foreach ($appentry in $applist)
+        {
+            $principalId = $appentry.AppPrincipalId.Guid
+            $principalName = $appentry.DisplayName
+            
+            $clientSecrets = Get-MsolServicePrincipalCredential -AppPrincipalId $principalId -ReturnKeyValues $false | Where-Object { ($_.Type -ne "Other") -and ($_.Type -ne "Asymmetric") }
+            
+            if ($null -ne $clientSecrets)
             {
-                $allExpiredKeys += $clientSecret
+                foreach ($secret in $clientSecrets)
+                {
+                    $clientSecret = "" | Select-Object "PrincipalName","PrincipalID","KeyId","SecretType","StartDate","EndDate","Usage"
+                    $clientSecret.PrincipalName = $principalName
+                    $clientSecret.PrincipalID = $principalId
+                    $clientSecret.KeyId = $secret.KeyId
+                    $clientSecret.SecretType = $secret.Type
+                    $clientSecret.StartDate = $secret.StartDate
+                    $clientSecret.EndDate = $secret.EndDate
+                    $clientSecret.Usage = $secret.Usage
+                    $keyEndDate = $secret.EndDate.ToShortDateString();
+                    $dayDiff = New-TimeSpan -Start $currentDate -End $keyEndDate
+
+                    if($dayDiff.Days -le $dayLimit)
+                    {
+                        $allExpiredKeys += $clientSecret
+                    }
+                    else
+                    {
+                        $allValidKeys += $clientSecret
+                    }
+                }
             }
             else
             {
-                $allValidKeys += $clientSecret
+                Write-Host "No Keys exists for App $AppId"
             }
+        } 
 
-        }
+        $allValidKeys | Out-File "$PathToSaveOutput\Secret_Valid.txt"
+        $allExpiredKeys | Out-File "$PathToSaveOutput\Secret_Expiring.txt"
+        Write-Host "Done. Check $PathToSaveOutput for output"
     }
+    else 
+    {
+        Write-Host "No App with $AppId Found"
+    }
+}
 
+#Replace with your appid or clientId. If no appid is given, the script will get keys for all the apps in your tenants.
+#GetAllKeys
+#GetAllKeys -AppId 'a9554ccc-14ed-48e8-a58f-f57a96d44f91' -PathToSaveOutput 'C:\Temp\AADSecrets'
 
-} 
-
-$allValidKeys | Out-File "$ScriptDir\Secret_Valid.txt"
-$allExpiredKeys | Out-File "$ScriptDir\Secret_Expiring.txt"
-
-Write-Host "Done."
+#path of directory to save the output. Directory should exist. if not supplied default is C:\Temp\ 
+GetAllKeys -AppId 'a9554ccc-14ed-48e8-a58f-f57a96d44f91' -PathToSaveOutput 'C:\Temp\AADSecrets'
